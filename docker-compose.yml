@@ -8,7 +8,7 @@ volumes:
   db_data:
 
 services:
-  # 1. DATABASE: MariaDB (Con Healthcheck e Restart)
+  # 1. DATABASE: MariaDB (Invariato)
   mariadb_servizio:
     image: mariadb:11.2
     container_name: mariadb_container
@@ -23,14 +23,13 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-    # Controllo di salute: esegue un ping interno per capire quando il DB accetta connessioni
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # 2. INTERFACCIA WEB DB: phpMyAdmin
+  # 2. INTERFACCIA WEB DB: phpMyAdmin (Invariato)
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin_container
@@ -47,20 +46,20 @@ services:
       mariadb_servizio:
         condition: service_healthy
 
-  # 3. BACKEND: Spring Boot (Parte SOLO quando MariaDB è realmente pronto)
+  # 3. BACKEND: Spring Boot (MODIFICATO: Blindato all'interno della rete)
   backend:
-    build: ./backend # Cartella dove è presente il Dockerfile
+    build: ./backend
     container_name: spring_backend_container
     restart: unless-stopped
     networks:
       - rete-laboratorio
-    ports:
-      - "8095:8095"
+    expose:
+      - "8095" # Ora è accessibile SOLO da Nginx, nessuna porta esposta su Windows
     depends_on:
       mariadb_servizio:
         condition: service_healthy
 
-  # 4. FRONTEND: Nginx Standard
+  # 4. FRONTEND / REVERSE PROXY: Nginx (MODIFICATO: Gestisce HTTPS e smistamento)
   frontend:
     image: nginx:latest
     container_name: nginx_frontend_container
@@ -68,6 +67,11 @@ services:
     networks:
       - rete-laboratorio
     ports:
-      - "8080:80"
+      - "80:80"    # Riceve il traffico HTTP standard per fare il redirect a HTTPS
+      - "443:443"  # Riceve il traffico HTTPS sicuro per il dominio registro.clienti.it
     volumes:
       - ./frontend:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
