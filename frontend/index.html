@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestione Utenti - Laboratorio Docker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { padding: 8px; margin: 5px; }
+        button { padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Laboratorio Docker: Frontend Vanilla JS</h1>
+
+    <div class="box">
+        <h3>Registra Utente</h3>
+        <input type="text" id="nome" placeholder="Nome">
+        <input type="text" id="cognome" placeholder="Cognome">
+        <input type="text" id="cf" placeholder="Codice Fiscale">
+        <button onclick="salvaUtente()">Invia in Cloud</button>
+    </div>
+
+    <div class="box">
+        <h3>Lista Utenti Salvati</h3>
+        <button onclick="caricaUtenti()" style="background: #28a745;">Aggiorna Lista</button>
+        <ul id="listaUtenti"></ul>
+    </div>
+
+    <script>
+        // Nota: Puntiamo a localhost:8095 perché il browser gira sull'host fisico!
+        const API_URL = 'http://localhost:8095/api/utenti';
+
+        async function caricaUtenti() {
+            const res = await fetch(`${API_URL}/leggi`);
+            const utenti = await res.json();
+            const ul = document.getElementById('listaUtenti');
+            ul.innerHTML = '';
+            utenti.forEach(u => {
+                ul.innerHTML += `<li>ID: ${u.id} - ${u.nome} ${u.cognome} ${u.cf} 
+                    <button onclick="eliminaUtente(${u.id})" style="background:red; padding:2px 5px; margin-left:10px;">X</button></li>`;
+            });
+        }
+
+        async function salvaUtente() {
+            const utente = {
+                // Leggiamo solo i tre campi compilabili
+                nome: document.getElementById('nome').value,
+                cognome: document.getElementById('cognome').value,
+                cf: document.getElementById('cf').value
+            };
+            
+            await fetch(`${API_URL}/registrazione`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(utente)
+            });
+
+            // Pulizia dei campi dopo l'invio
+            document.getElementById('nome').value = '';
+            document.getElementById('cognome').value = '';
+            document.getElementById('cf').value = '';
+
+            caricaUtenti();
+        }
+
+        async function eliminaUtente(id) {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            caricaUtenti();
+        }
+    </script>
+</body>
+</html>

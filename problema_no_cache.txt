@@ -1,0 +1,21 @@
+Premature end of Content-Length delimited message body
+
+Significa che la connessione con i server di Maven Central è caduta 
+improvvisamente a metà download: Maven si aspettava 9 Mega di file 
+(per la libreria byte-buddy), ma ne ha ricevuti solo 4. 
+Il file è corrotto e la compilazione si è bloccata. 
+Siccome Docker ha memorizzato nei suoi "layer" di cache questo tentativo 
+fallito, continuare a lanciare il comando normale potrebbe riproporre 
+l'errore.
+
+🛠️ Come risolvere all'istante
+Dobbiamo semplicemente dire a Docker di ignorare la cache per questa volta 
+e scaricare di nuovo i pacchetti in modo pulito.
+
+Esegui questo comando aggiungendo la bandiera --no-cache:
+
+docker compose build --no-cache
+
+Poi riaccendere l'ambiente con:
+
+docker compose up -d
