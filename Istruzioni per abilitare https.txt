@@ -1,0 +1,57 @@
+Step 1: Configurare il DNS Locale (sul tuo PC)
+Per far capire al tuo browser che registro.clienti.it corrisponde al tuo computer, dobbiamo mappare il dominio nel file hosts di Windows.
+
+Apri Blocco Note (o VS Code) come Amministratore.
+
+Apri il file: C:\Windows\System32\drivers\etc\hosts
+
+Aggiungi questa riga in fondo al file e salva:
+
+Plaintext
+127.0.0.1  registro.clienti.it
+
+
+Step 2: Generare il Certificato SSL "Fittizio"
+Creiamo una cartella sul computer (es. dentro la cartella del progetto dove c'è il docker-compose) chiamata certs e generiamo i certificati validi per 365 giorni tramite OpenSSL:
+
+mkdir certs
+docker run --rm --platform linux/amd64 -v ${PWD}/certs:/export alpine sh -c "apk add --no-cache openssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /export/registro.key -out /export/registro.crt -subj '/CN=registro.clienti.it'"
+
+
+Step 3: Configurare il file nginx.conf
+Crea un file chiamato nginx.conf nella cartella del tuo proxy/reverse proxy. Questo file istruisce Nginx ad accettare traffico HTTPS sulla 443, usare i certificati appena creati e girare tutto al container del backend Spring Boot.
+
+events { worker_connections 1024; }
+
+http {
+    # Reindirizzamento da HTTP (80) a HTTPS (443)
+    server {
+        listen 80;
+        server_name registro.clienti.it;
+        return 301 https://$host$request_uri;
+    }
+
+    # Configurazione HTTPS
+    server {
+        listen 443 ssl;
+        server_name registro.clienti.it;
+
+        ssl_certificate /etc/nginx/certs/registro.crt;
+        ssl_certificate_key /etc/nginx/certs/registro.key;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+
+        location / {
+            proxy_pass http://backend:8095; # Nome del servizio nel docker-compose
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
+
+
+Step 4: Modificare il docker-compose.yml
+Ora colleghiamo tutto nel docker-compose.yml. Dobbiamo aggiungere il servizio nginx, esporre le porte 80 e 443 verso il tuo PC e montare come volumi sia la configurazione che i certificati. Inoltre, rimuoveremo l'esposizione diretta della porta 8095 del backend verso l'esterno, blindandolo dentro la rete di Docker!

@@ -1,0 +1,51 @@
+Configurazione da Interfaccia Web (UI)
+
+1) Apri il browser e vai sul pannello di NPM: http://localhost:81
+
+2) Accedi con le credenziali predefinite di Nginx Proxy Manager:
+
+Email: admin@example.com
+
+Password: changeme
+
+3) Al primo accesso ti chiederà di configurare la tua email reale (fittizia per il lab) e 
+una nuova password sicura.
+-------------------------------------
+
+Configurare il Proxy Host per il Frontend e il Backend
+
+Nel pannello di NPM, vai su Hosts ➡️ Proxy Hosts ➡️ Add Proxy Host:
+
+Domain Names: registro.clienti.it
+
+Scheme: http
+
+Forward Hostname / IP: frontend (Sfruttiamo il DNS interno di Docker!)
+
+Forward Port: 80
+
+Opzioni consigliate: Attiva Block Common Exploits e Websockets Support.
+
+Non salvare ancora! Spostati nella scheda Custom Locations 
+(sempre all'interno dello stesso pop-up) per mappare le API del backend:
+
+Clicca su Add Location.
+
+Define location: /api/
+
+Scheme: http
+
+Forward Hostname / IP: backend (Nome del servizio Spring Boot)
+
+Forward Port: 8095
+
+Infine, spostati nella scheda SSL:
+
+SSL Certificate: Scegli Custom per caricare i file .crt e .key 
+creati in precedenza (oppure, se si volesse usare un dominio pubblico reale, 
+NPM potrebbe richiedere un certificato Let's Encrypt automatico con un clic!). 
+Visto che siamo in locale, carichiamo i file self-signed passandoli a NPM.
+
+Attiva Force SSL ed HTTP/2 Support per forzare il redirect automatico.
+
+Clicca su Save.

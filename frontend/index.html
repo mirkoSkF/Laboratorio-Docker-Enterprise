@@ -29,8 +29,8 @@
     </div>
 
     <script>
-        // Nota: Puntiamo a localhost:8095 perché il browser gira sull'host fisico!
-        const API_URL = 'http://localhost:8095/api/utenti';
+        // Nota didattica: Ora puntiamo al dominio di terzo livello in HTTPS gestito da Nginx!
+        const API_URL = 'https://registro.clienti.it/api/utenti';
 
         async function caricaUtenti() {
             const res = await fetch(`${API_URL}/leggi`);

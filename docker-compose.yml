@@ -6,9 +6,14 @@ networks:
 
 volumes:
   db_data:
+    driver: local
+  npm_data:
+    driver: local
+  npm_letsencrypt:
+    driver: local
 
 services:
-  # 1. DATABASE: MariaDB (Con Healthcheck e Restart)
+  # 1. DATABASE: MariaDB
   mariadb_servizio:
     image: mariadb:11.2
     container_name: mariadb_container
@@ -23,7 +28,6 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-    # Controllo di salute: esegue un ping interno per capire quando il DB accetta connessioni
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -47,27 +51,45 @@ services:
       mariadb_servizio:
         condition: service_healthy
 
-  # 3. BACKEND: Spring Boot (Parte SOLO quando MariaDB è realmente pronto)
+  # 3. BACKEND: Spring Boot
   backend:
-    build: ./backend # Cartella dove è presente il Dockerfile
+    build: ./backend
     container_name: spring_backend_container
     restart: unless-stopped
     networks:
       - rete-laboratorio
-    ports:
-      - "8095:8095"
+    expose:
+      - "8095"
     depends_on:
       mariadb_servizio:
         condition: service_healthy
 
-  # 4. FRONTEND: Nginx Standard
+  # 4. FRONTEND: Torna ad essere un semplice Nginx statico sulla rete interna
   frontend:
     image: nginx:latest
     container_name: nginx_frontend_container
     restart: unless-stopped
     networks:
       - rete-laboratorio
-    ports:
-      - "8080:80"
+    expose:
+      - "80" # Blindato internamente, ci penserà NPM a parlargli
     volumes:
       - ./frontend:/usr/share/nginx/html
+
+  # 5. REVERSE PROXY MANAGER (Il nuovo regista)
+  nginx-proxy-manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx_proxy_manager
+    restart: unless-stopped
+    ports:
+      - '80:80'    # Traffico HTTP pubblico
+      - '443:443'  # Traffico HTTPS pubblico
+      - '81:81'    # Interfaccia Web di Amministrazione di NPM
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - rete-laboratorio
+    depends_on:
+      - frontend
+      - backend
