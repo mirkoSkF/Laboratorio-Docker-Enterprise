@@ -1,0 +1,54 @@
+Abbiamo preso un'applicazione classica a container e l'abbiamo trasformata in un'architettura Cloud Native ad alta affidabilità, strutturata su 4 file di configurazione dichiarativa (YAML).
+
+Nel cluster ora girano 7 Pod totali, così distribuiti:
+
+1 Pod di Database (MariaDB) con persistenza dei dati.
+3 Pod di Backend (Spring Boot) in replica e bilanciati automaticamente.
+3 Pod di Frontend (Nginx statico) in replica per servire le pagine web.
+
+🛠️ La Mappa degli Oggetti Kubernetes Utilizzati
+Per rimpiazzare e potenziare il vecchio Docker Compose, abbiamo usato i 5 oggetti fondamentali di Kubernetes:
+
+1. Secret (La Sicurezza)
+Cosa fa: Nasconde e cifra le credenziali sensibili in formato Base64.
+Nel tuo laboratorio: Custodisce la password di root del database (database-root-password), evitando di scriverla in chiaro nei file di configurazione del database e del backend.
+
+2. PersistentVolumeClaim / PVC (La Persistenza)
+Cosa fa: Richiede formalmente dello spazio sul disco fisico del PC/Server che ospita il cluster.
+Nel tuo laboratorio: Dice a Kubernetes di allocare 1 GB di spazio per la cartella /var/lib/mysql di MariaDB. Se il Pod del database si rompe o viene riavviato, i dati non vanno persi.
+
+3. Deployment (Il Cervello e le Repliche)
+Cosa fa: Dichiara lo stato desiderato dei container (quale immagine usare, quante repliche avere, le porte interne) e si occupa del Self-Healing (se un Pod muore, lo ricrea all'istante).
+Nel tuo laboratorio ne hai 3:
+
+mariadb-deployment: Mantiene fissa 1 replica per il DB transazionale.
+backend-spring-deployment: Mantiene attive 3 repliche del server Spring Boot.
+frontend-nginx-deployment: Mantiene attive 3 repliche del server web Nginx.
+
+4. ConfigMap (La Configurazione del Codice)
+Cosa fa: Inietta file statici o variabili di configurazione dentro i container senza dover ricompilare l'immagine Docker da zero.
+Nel tuo laboratorio: Contiene l'intero file index.html del frontend, iniettandolo direttamente dentro i 3 Pod di Nginx.
+
+5. Service (Il Networking e il Load Balancer)
+Cosa fa: Crea un indirizzo DNS interno stabile per un gruppo di Pod e fa da Load Balancer automatico distribuendo il traffico tra le varie repliche disponibili.
+Nel tuo laboratorio: * Il servizio mariadb-servizio permette a Spring Boot di raggiungere il DB usando sempre lo stesso nome.
+Il servizio backend riceve le chiamate dal frontend e le smista in modo bilanciato (Round-Robin) sui 3 Pod di Spring Boot attivi.
+
+🏎️ I Comandi Chiave del Successo (Cheat Sheet per la lezione)
+Ecco i comandi sequenziali che hai usato e che puoi mostrare durante il corso:
+
+PowerShell
+# 1. Applicazione dell'infrastruttura in ordine logico
+kubectl apply -f 01-mariadb-infra.yaml
+kubectl apply -f 02-mariadb-deployment.yaml
+kubectl apply -f 03-backend-deployment.yaml
+kubectl apply -f 04-frontend-nginx.yaml
+
+# 2. Controllo dello stato di salute della flotta
+kubectl get pods
+kubectl get svc
+kubectl get pvc
+
+# 3. Accesso dall'esterno (il tunnel Windows -> Cluster)
+kubectl port-forward svc/frontend 8080:80
+kubectl port-forward svc/backend 8095:8095
