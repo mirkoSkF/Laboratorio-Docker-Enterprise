@@ -1,0 +1,74 @@
+1. Comandi di Rimozione e Pulizia Totale (Tabula Rasa)
+Da usare quando si vuole azzerare il laboratorio per eliminare vecchi residui o conflitti di configurazione.
+
+# Rimuove tutti i Deployment (Frontend, Backend, MariaDB)
+kubectl delete deployments --all
+
+# Rimuove tutti i Servizi di rete (Routing interno)
+kubectl delete services --all
+
+# Rimuove tutte le ConfigMap (I file HTML o configurazioni iniettate)
+kubectl delete configmaps --all
+
+# Rimuove tutti i Secret (Le password cifrate del database)
+kubectl delete secrets --all
+
+# Rimuove la persistenza (I dischi virtuali associati a MariaDB)
+kubectl delete pvc --all
+
+# Rimuove un singolo file YAML specifico (metodo selettivo alternativo)
+kubectl delete -f 04-frontend-nginx.yaml
+--------------------------------------------------------------------------------------------
+2. Comandi di Avvio e Deploy (Iniezione Manifesti)
+# 1. Crea la base infrastrutturale (Secret per la password + PVC per il disco)
+kubectl apply -f 01-mariadb-infra.yaml
+
+# 2. Crea il database MariaDB (Pod + Servizio di rete interno)
+kubectl apply -f 02-mariadb-deployment.yaml
+
+# 3. Crea la flotta Backend Spring Boot (3 Pod in replica)
+kubectl apply -f 03-backend-deployment.yaml
+
+# 4. Crea la flotta Frontend Nginx e la ConfigMap con il codice HTML
+kubectl apply -f 04-frontend-nginx.yaml
+--------------------------------------------------------------------------------------------
+3. Comandi di Ispezione e Diagnostica (Stato di Salute)
+I comandi fondamentali per "vedere" cosa succede dentro il motore di Kubernetes.
+
+PowerShell
+# Mostra lo stato di tutti gli oggetti attivi nel cluster (Panoramica generale)
+kubectl get all
+
+# Elenca tutti i Pod attivi, monitorando lo stato (es. Running, Pending, Errore)
+kubectl get pods
+
+# Elenca tutti i Servizi di rete con i relativi indirizzi IP interni del cluster
+kubectl get svc
+
+# Elenca i volumi persistenti per verificare che il database stia conservando i dati
+kubectl get pvc
+
+# Fa una "radiografia" approfondita a un Pod specifico per leggere gli "Events" in fondo
+kubectl describe pod <nome-del-pod>
+
+# Mostra i log di console in tempo reale di un container (es. il bootstrap di Spring Boot)
+kubectl logs <nome-del-pod>
+--------------------------------------------------------------------------------------------
+🔄 4. Comandi di Manutenzione e Troubleshooting Ciclico
+Utili quando si modifica un'immagine Docker locale o si vuole forzare un aggiornamento dei container.
+
+PowerShell
+# Riavvia in modo controllato (Rollout) tutti i Pod di un determinato deployment
+kubectl rollout restart deployment backend-spring-deployment
+
+# Forza l'eliminazione manuale di un singolo Pod (K8s lo ricreerà all'istante)
+kubectl delete pod <nome-del-pod>
+🌐 5. Comandi di Networking Esterno (Port-Forwarding)
+I tunnel temporanei per collegare il browser del tuo PC Windows direttamente ai servizi isolati dentro Kubernetes.
+
+PowerShell
+# Apre la porta 8080 di Windows verso la porta 80 del servizio Frontend Nginx
+kubectl port-forward svc/frontend 8080:80
+
+# Apre la porta 8095 di Windows verso la porta 8095 del servizio Backend Spring Boot
+kubectl port-forward svc/backend 8095:8095
