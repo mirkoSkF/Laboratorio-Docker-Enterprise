@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mariadb-secret
+  labels:
+    app: azienda-app
+type: Opaque
+data:
+  # La stringa "root" codificata in Base64 è: cm9vdA==
+  database-root-password: cm9vdA==
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-pvc
+  labels:
+    app: azienda-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

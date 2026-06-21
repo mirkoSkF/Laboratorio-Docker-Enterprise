@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-spring-deployment
+  labels:
+    app: backend
+spec:
+  replicas: 3 # <-- Ecco le tue 3 repliche scalate!
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: spring-backend
+          # Usa il tag dell'immagine che hai buildato localmente
+          image: backend:latest 
+          imagePullPolicy: IfNotPresent # Dice a K8s di usare l'immagine locale senza scaricarla dal cloud
+          ports:
+            - containerPort: 8095
+              name: api-port
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mariadb://mariadb-servizio:3306/azienda_db"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: database-root-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend # Nome DNS interno usato dal Reverse Proxy
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8095
+      targetPort: 8095
+  type: ClusterIP
